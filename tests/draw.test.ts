@@ -234,3 +234,20 @@ test('model ids read the way people say them', async () => {
   expect(modelLabel('some-other-model')).toBe('')
   expect(modelLabel('')).toBe('')
 })
+
+import { CRITTER_CELLS, textCritter } from '../hooks/draw'
+
+test('the terminal critter is ASCII, fixed width, animates while running and rests when done', async () => {
+  const running = agent({ activity: 'searching' })
+  const frames = [0, 1_000].map(t => textCritter(running, t))
+  expect(frames[0]).not.toBe(frames[1])
+  for (const s of ['running', 'done', 'failed', 'cancelled'] as const) {
+    for (const t of [0, 1_000, 2_000, 3_000]) {
+      const c = textCritter(agent({ status: s, activity: 'thinking' }), t)
+      expect(c.length).toBe(CRITTER_CELLS)
+      expect(/^[\x20-\x7e]+$/.test(c)).toBe(true)
+    }
+  }
+  expect(textCritter(agent({ status: 'done' }), 0)).toBe(textCritter(agent({ status: 'done' }), 1_000))
+  expect(textCritter(agent({ waitingFor: 'Bash' }), 0)).toContain('?')
+})
