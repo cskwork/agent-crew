@@ -5,7 +5,7 @@ import type { Activity, Agent, AgentStatus, RecentTool, Step, Tokens, TouchedFil
 import {
   QUIET_TOOLS, SPRITE_CELLS, SPRITE_H, SPRITE_W, STALE_MS, activityOf, addUsage, barSvg, capAgents, clip, costOf, formatCost,
   crewSummary, doingText, emptyTokens, statusLabel, fileOf, filesSummary, withFiles, estimateText, formatDuration, formatTokens, workTokens, tokenText, sumTokens, cacheIsNotable, headerSvg, headline, layout,
-  learn, modelShort, modelLabel, redact, sanitizeHistory, statusText, shownProgress, spriteSvg, statusColor, stepsFromTodos, targetOf, textBar, textCritter, dotColor, labelSvg, LABEL_W, LABEL_H,
+  learn, modelShort, modelLabel, redact, sanitizeHistory, statusText, shownProgress, spriteSvg, statusColor, stepsFromTodos, targetOf, textBar, textCritter, freeLook, dotColor, labelSvg, LABEL_W, LABEL_H,
   tree, typeColor, typeLabel, withActivity, withStepCreated, withStepUpdated,
 } from './draw'
 import type { History, Layout } from './draw'
@@ -213,7 +213,11 @@ export const register: Register = (on, options) => {
       const folded = await read($, collapsed)
       if (folded) await update($, collapsed, () => false)
     }
-    await update($, agents, list => capAgents([...list.filter(a => a.id !== agent.id), agent]))
+    await update($, agents, list => {
+      const others = list.filter(a => a.id !== agent.id)
+      const look = list.find(a => a.id === agent.id)?.look ?? freeLook(others)
+      return capAgents([...others, { ...agent, look }])
+    })
     // Agents the cap removed are no longer tracked
     const kept = await read($, agents)
     known.clear()
@@ -971,7 +975,7 @@ async function startDemo($: EngineInterface) {
   const t0 = await $.clock.now()
   const crew: Agent[] = DEMO.map((d, i) => ({
     id: `demo-${i}`, type: d.type, description: d.description, model: d.model, status: 'running', activity: 'starting', target: '',
-    activityAt: t0, seenAt: t0, startedAt: t0 + d.at, tokens: emptyTokens(), tools: 0, requests: 0, demo: true, expectedMs: d.ms,
+    activityAt: t0, seenAt: t0, startedAt: t0 + d.at, tokens: emptyTokens(), tools: 0, requests: 0, demo: true, expectedMs: d.ms, look: i,
     parentId: d.parent !== undefined ? `demo-${d.parent}` : undefined,
   }))
   // Cancel after the await: two demos started at once must not leave two timers running.

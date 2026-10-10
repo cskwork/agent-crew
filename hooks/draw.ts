@@ -942,26 +942,44 @@ export const textBar = (share: number, width = 16, running = false) =>
 // The terminal can't draw the pixel sprite, so each row starts with a small ASCII critter holding
 // its tool. ASCII only: East Asian "ambiguous" glyphs (●, •, °) are two cells wide in some locales
 // and would shift the columns. Frames step once a second with the ticker's redraw.
+// Each subagent keeps its own face (brackets and mouth, its `look`); the eyes and the tool show
+// the state. Claude's own line keeps the plain (o_o).
 export const CRITTER_CELLS = 8
-const CRITTER: Record<Activity | 'waiting' | AgentStatus, string[]> = {
-  starting: ['(._.)', '(o_o)'],
-  thinking: ['(o_o) ?', '(-_o) .', '(o_o)..', '(^o^) !'],
-  searching: ['(o_o)-o', '(o.o)o-'],
-  reading: ['(o_o)[=]', '(-_-)[=]'],
-  writing: ['(o_o)_/', '(o_o)_.'],
-  running: ['(o_o)>_', '(o_o)> '],
-  web: ['(o_o)@', '(o_o) @'],
-  waiting: ['(o_o)?', '(O_O)?!'],
-  done: ['(^_^)/~'],
-  failed: ['(x_x)'],
-  cancelled: ['(-_-)zz'],
+const BRACKETS = ['[]', '{}', '<>', '||', '()']
+const MOUTHS = ['_', 'w', '.', '-', 'v', '=']
+const MAIN_FACE = '()_'
+/** Every crew face, the plain one left to Claude: the first five differ by their brackets. */
+export const LOOKS = MOUTHS.flatMap(m => BRACKETS.map(b => b + m)).filter(f => f !== MAIN_FACE)
+
+/** The first face nobody on the stage wears; with every face taken, faces repeat. */
+export function freeLook(list: Pick<Agent, 'look'>[]): number {
+  const used = new Set(list.map(a => a.look))
+  const free = LOOKS.findIndex((_, i) => !used.has(i))
+  return free >= 0 ? free : list.length % LOOKS.length
 }
 
-/** The terminal row's critter for this second: activity while running, else the end state. */
+/** Per state: [eyes, tool] for each frame. */
+const CRITTER: Record<Activity | 'waiting' | AgentStatus, [string, string][]> = {
+  starting: [['..', ''], ['oo', '']],
+  thinking: [['oo', ' ?'], ['-o', ' .'], ['oo', '..'], ['^^', ' !']],
+  searching: [['oo', '-o'], ['OO', 'o-']],
+  reading: [['oo', '[=]'], ['--', '[=]']],
+  writing: [['oo', '_/'], ['oo', '_.']],
+  running: [['oo', '>_'], ['oo', '> ']],
+  web: [['oo', '@'], ['oo', ' @']],
+  waiting: [['oo', '?'], ['OO', '?!']],
+  done: [['^^', '/~']],
+  failed: [['xx', '']],
+  cancelled: [['--', 'zz']],
+}
+
+/** The terminal row's critter for this second: its own face, the activity while running, else the end state. */
 export function textCritter(a: Agent, now: number): string {
   const key = a.status !== 'running' ? a.status : a.waitingFor ? 'waiting' : shownActivity(a, now).activity
   const frames = CRITTER[key] ?? CRITTER.thinking
-  return frames[Math.floor(now / 1000) % frames.length].padEnd(CRITTER_CELLS)
+  const [eyes, tool] = frames[Math.floor(now / 1000) % frames.length]
+  const face = a.look === undefined ? MAIN_FACE : LOOKS[a.look % LOOKS.length]
+  return `${face[0]}${eyes[0]}${face[2]}${eyes[1]}${face[1]}${tool}`.padEnd(CRITTER_CELLS)
 }
 
 /** The terminal critter's color: working, waiting on you, done, failed or cancelled. */

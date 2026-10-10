@@ -413,3 +413,22 @@ test('a request that rebuilds the cache leaves the row alone; the details show t
   expect(await ui.find({ type: 'Text', text: /cache expires/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('each spawned subagent gets its own terminal face and keeps it', async ($, on) => {
+  mock.clock(on, { now: 1_000_000 })
+  mock.store(on)
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.render', () => ({ type: 'Text' as const, props: {}, children: ['ENGINE ROW'] }))
+  let n = 0
+  on('agent.spawn', () => ({ agentId: `a${++n}`, model: 'claude-haiku-5-5' }))
+  on('agent.list', () => ({ value: [] }))
+  await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
+  for (const d of ['One', 'Two', 'Three']) await $.agent.spawn({ prompt: 'p', description: d, subagentType: 'Explore' })
+  const ui = await $.ui.mount({ plugin: 'agent-crew', surface: 'terminal', component: 'AbovePrompt', props: BAND, viewport: VIEW })
+  expect(await ui.find({ type: 'Text', text: /^\[\.\.?_/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^\{\.\.?_/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^<\.\.?_/ })).toBeDefined()
+  await ui.unmount()
+})
