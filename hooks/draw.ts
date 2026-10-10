@@ -444,9 +444,9 @@ export const FIXED_EXTRAS = 6 + 9 + 4 + 1
 const DESKTOP_BUDGET = 0.94
 
 export function layout(columns: number, desktop = true, showCost = false): Layout {
-  // The terminal's dot and its space take two cells where the desktop sprite takes six, and its
-  // arrow carries a hotkey ("a: ▸"), three cells more
-  const budget = Math.floor(columns * (desktop ? DESKTOP_BUDGET : 1)) + (desktop ? 0 : 6 - 2 - 3)
+  // The terminal's text critter and its space take CRITTER_CELLS + 1 cells where the desktop
+  // sprite takes six, and its arrow carries a hotkey ("a: ▸"), three cells more
+  const budget = Math.floor(columns * (desktop ? DESKTOP_BUDGET : 1)) + (desktop ? 0 : 6 - (CRITTER_CELLS + 1) - 3)
   // With costs on, the token column also holds "≈$0.04"
   // The type column also holds the model: under the type on the desktop ("Sonnet 5.5" needs ten
   // cells), beside it on the terminal when there is room
@@ -938,11 +938,33 @@ export function barSvg(share: number, color: string, running: boolean, width: nu
 // ── Terminal ─────────────────────────────────────────────────
 export const textBar = (share: number, width = 16, running = false) =>
   '█'.repeat(running ? Math.min(width - 1, Math.floor(share * width)) : Math.round(share * width)).padEnd(width, '░')
-// ── Terminal marker ──────────────────────────────────────────
-// The terminal draws no critter: each row starts with a dot whose color carries the state.
-export const DOT = '●'
+// ── Terminal critter ─────────────────────────────────────────
+// The terminal can't draw the pixel sprite, so each row starts with a small ASCII critter holding
+// its tool. ASCII only: East Asian "ambiguous" glyphs (●, •, °) are two cells wide in some locales
+// and would shift the columns. Frames step once a second with the ticker's redraw.
+export const CRITTER_CELLS = 8
+const CRITTER: Record<Activity | 'waiting' | AgentStatus, string[]> = {
+  starting: ['(._.)', '(o_o)'],
+  thinking: ['(o_o) ?', '(-_o) .', '(o_o)..', '(^o^) !'],
+  searching: ['(o_o)-o', '(o.o)o-'],
+  reading: ['(o_o)[=]', '(-_-)[=]'],
+  writing: ['(o_o)_/', '(o_o)_.'],
+  running: ['(o_o)>_', '(o_o)> '],
+  web: ['(o_o)@', '(o_o) @'],
+  waiting: ['(o_o)?', '(O_O)?!'],
+  done: ['(^_^)/~'],
+  failed: ['(x_x)'],
+  cancelled: ['(-_-)zz'],
+}
 
-/** The terminal row's dot color: working, waiting on you, done, failed or cancelled. */
+/** The terminal row's critter for this second: activity while running, else the end state. */
+export function textCritter(a: Agent, now: number): string {
+  const key = a.status !== 'running' ? a.status : a.waitingFor ? 'waiting' : shownActivity(a, now).activity
+  const frames = CRITTER[key] ?? CRITTER.thinking
+  return frames[Math.floor(now / 1000) % frames.length].padEnd(CRITTER_CELLS)
+}
+
+/** The terminal critter's color: working, waiting on you, done, failed or cancelled. */
 export function dotColor(a: Pick<Agent, 'status' | 'waitingFor'>): string {
   if (a.status === 'running') return a.waitingFor ? C.yellow : C.body
   return a.status === 'done' ? C.green : a.status === 'failed' ? C.red : C.grey

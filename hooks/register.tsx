@@ -5,7 +5,7 @@ import type { Activity, Agent, AgentStatus, RecentTool, Step, Tokens, TouchedFil
 import {
   QUIET_TOOLS, SPRITE_CELLS, SPRITE_H, SPRITE_W, STALE_MS, activityOf, addUsage, barSvg, capAgents, clip, costOf, formatCost,
   crewSummary, doingText, emptyTokens, statusLabel, fileOf, filesSummary, withFiles, estimateText, formatDuration, formatTokens, workTokens, tokenText, sumTokens, cacheIsNotable, headerSvg, headline, layout,
-  learn, modelShort, modelLabel, redact, sanitizeHistory, statusText, shownProgress, spriteSvg, statusColor, stepsFromTodos, targetOf, textBar, DOT, dotColor, labelSvg, LABEL_W, LABEL_H,
+  learn, modelShort, modelLabel, redact, sanitizeHistory, statusText, shownProgress, spriteSvg, statusColor, stepsFromTodos, targetOf, textBar, textCritter, dotColor, labelSvg, LABEL_W, LABEL_H,
   tree, typeColor, typeLabel, withActivity, withStepCreated, withStepUpdated,
 } from './draw'
 import type { History, Layout } from './draw'
@@ -466,7 +466,9 @@ export const register: Register = (on, options) => {
           {Svg ? (
             <Svg source={working ? spriteSvg(working, now) : headerSvg(!anyRunning)} alt={hasCrew ? 'Agent Crew' : 'Agent'} width={SPRITE_W} height={SPRITE_H} />
           ) : (
-            <Text color={dotColor(working ?? { status: anyRunning ? 'running' : 'done' })}>{DOT}</Text>
+            <Text color={dotColor(working ?? { status: anyRunning ? 'running' : 'done' })}>
+              {working ? textCritter(working, now).trimEnd() : anyRunning ? '(o_o)' : '(^_^)/~'}
+            </Text>
           )}
           <Box flexShrink={0}>
             <Text bold color="claude">{hasCrew ? 'AGENT CREW' : 'AGENT'}</Text>
@@ -518,7 +520,7 @@ export const register: Register = (on, options) => {
       const toggle = () => setOpen($, a.id, !isOpen)
       const line = Svg
         ? desktopRow({ Box, Text, Svg, Button }, row, L, barPx, now, toggle)
-        : terminalRow({ Box, Text, Button }, row, L, toggle, ROW_KEYS[index])
+        : terminalRow({ Box, Text, Button }, row, L, now, toggle, ROW_KEYS[index])
       // Every row lives in the same wrapper, open or not, so a toggle never rebuilds the row.
       // Open, the wrapper frames the row and its details in dashed yellow.
       return (
@@ -608,7 +610,7 @@ function desktopRow({ Box, Text, Svg, Button }: Els, r: RowData, L: Layout, barP
   )
 }
 
-function terminalRow({ Box, Text, Button }: Els, r: RowData, L: Layout, onToggle: () => void, hotkey: string | undefined) {
+function terminalRow({ Box, Text, Button }: Els, r: RowData, L: Layout, now: number, onToggle: () => void, hotkey: string | undefined) {
   const { a, depth, isOpen, share, est, doing, color } = r
   const helper = depth > 0
   const taskCells = Math.max(8, L.task - (helper ? depth * 3 + 1 : 0) - (isOpen ? 2 : 0))
@@ -616,7 +618,7 @@ function terminalRow({ Box, Text, Button }: Els, r: RowData, L: Layout, onToggle
     <Box key={a.id} flexDirection="row">
       <Text>
         <Text color="subtle">{helper ? `${'   '.repeat(depth - 1)} └ ` : ''}</Text>
-        <Text color={dotColor(a)}>{`${DOT} `}</Text>
+        <Text color={dotColor(a)}>{`${textCritter(a, now)} `}</Text>
         <Text bold color={typeColor(a.type)}>{typeLabel(a.type).padEnd(L.type + 1)}</Text>
         <Text color="subtle">{L.model ? (modelLabel(a.model) ? modelShort(a.model) : '').padEnd(L.model) : ''}</Text>
       </Text>
