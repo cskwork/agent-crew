@@ -78,7 +78,7 @@ Turn on **Show estimated cost** in the settings and each row also gets a ≈ dol
 
 **Settings** live in `/plugin configure agent-crew@agent-crew`: show Claude's own line (on), show estimated cost (off).
 
-**In the terminal** there's no pixel art, just a colored dot per row. Press `ctrl+x tab` to reach the crew, then the letter on an arrow: `h` for the title, `a`, `b`, `c` for the rows.
+**In the terminal** there's no pixel art. This fork draws a small ASCII critter per row instead of a dot: each subagent wears its own face (`[o_o]`, `{o_o}`, `<o_o>`, …), and its eyes and tool show the state (`[o_o]-o` searching, `{x_x}` failed, `<^_^>/~` done). Press `ctrl+x tab` to reach the crew, then the letter on an arrow: `h` for the title, `a`, `b`, `c` for the rows.
 
 ## Development
 
