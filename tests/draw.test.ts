@@ -235,7 +235,7 @@ test('model ids read the way people say them', async () => {
   expect(modelLabel('')).toBe('')
 })
 
-import { CRITTER_CELLS, textCritter } from '../hooks/draw'
+import { CRITTER_CELLS, LOOKS, freeLook, textCritter } from '../hooks/draw'
 
 test('the terminal critter is ASCII, fixed width, animates while running and rests when done', async () => {
   const running = agent({ activity: 'searching' })
@@ -250,4 +250,15 @@ test('the terminal critter is ASCII, fixed width, animates while running and res
   }
   expect(textCritter(agent({ status: 'done' }), 0)).toBe(textCritter(agent({ status: 'done' }), 1_000))
   expect(textCritter(agent({ waitingFor: 'Bash' }), 0)).toContain('?')
+})
+
+test('each subagent wears its own face, Claude keeps the plain one, and the state still shows', async () => {
+  expect(new Set(LOOKS).size).toBe(LOOKS.length)
+  const faces = LOOKS.map((_, look) => textCritter(agent({ look, activity: 'writing' }), 0).slice(0, 5))
+  expect(new Set(faces).size).toBe(LOOKS.length)
+  expect(faces).not.toContain(textCritter(agent({ activity: 'writing' }), 0).slice(0, 5))
+  expect(textCritter(agent({ look: 1, status: 'failed' }), 0).trimEnd()).toBe('{x_x}')
+  // A new agent takes the first face nobody on the stage wears
+  expect(freeLook([{ look: 0 }, { look: 2 }])).toBe(1)
+  expect(freeLook([])).toBe(0)
 })

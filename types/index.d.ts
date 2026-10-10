@@ -49,6 +49,8 @@ export type Agent = {
   shownShare?: number
   /** Model requests made (turn.step): a progress clock independent of time. */
   requests: number
+  /** The terminal critter's face, an index into LOOKS; Claude's own line has none. */
+  look?: number
   /** The subagent that started this one; absent for agents started by the main conversation. */
   parentId?: string
   demo?: boolean
